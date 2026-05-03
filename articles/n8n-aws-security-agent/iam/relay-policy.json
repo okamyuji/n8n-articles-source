@@ -1,0 +1,32 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadWebhookToken",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter"],
+      "Resource": "arn:aws:ssm:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:parameter/n8n/prod/security-agent/webhook-token"
+    },
+    {
+      "Sid": "DecryptWebhookToken",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt"],
+      "Resource": "arn:aws:kms:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:key/${KMS_KEY_ID}",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "ssm.${AWS_DEFAULT_REGION}.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "WriteCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:log-group:/aws/lambda/aws-security-relay:*"
+    }
+  ]
+}

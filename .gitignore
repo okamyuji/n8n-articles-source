@@ -1,0 +1,26 @@
+# Secrets / local environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+
+# Lambda build artifacts
+*.zip
+node_modules/
+package-lock.json
+.npm/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.log
+*.bak
+.tmp/
+.cache/

@@ -1,0 +1,14 @@
+{
+  "name": "aws-security-investigator",
+  "version": "1.0.0",
+  "description": "Read-only CloudTrail / IAM investigator Lambda for the n8n GuardDuty alert pipeline.",
+  "main": "index.mjs",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudtrail": "^3.1041.0",
+    "@aws-sdk/client-iam": "^3.1041.0"
+  }
+}

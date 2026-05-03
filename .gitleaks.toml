@@ -1,0 +1,30 @@
+# gitleaks 8.x configuration
+# Extends the default ruleset and adds project-specific allowlists for false positives
+# from Lambda mask-function example patterns.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project-wide allowlist for example patterns and placeholders"
+
+paths = [
+  '''(?i).*\.example$''',
+  '''(?i)\.env\.example$''',
+  '''README\.md$''',
+]
+
+regexes = [
+  # Placeholder values intentionally written into example files
+  '''\$\{[A-Z_][A-Z0-9_]*\}''',
+  '''__REPLACE_WITH_[A-Z0-9_]+__''',
+  '''<your-[a-z0-9-]+>''',
+  '''<[A-Z_][A-Z0-9_]*>''',
+  # Example AWS access key id pattern used in mask-function regex literals
+  # (the literal string AKIA followed by [0-9A-Z]{16} as a JS regex source)
+  '''AKIA\[0-9A-Z\]\{16\}''',
+  # Example github token pattern in mask regex
+  '''ghp_\[A-Za-z0-9\]\{36\}''',
+  # Example slack webhook prefix in mask regex
+  '''hooks\.slack\.com/services/''',
+]

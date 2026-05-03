@@ -1,0 +1,11 @@
+{$DOMAIN} {
+    reverse_proxy n8n:5678
+    encode gzip
+
+    # WebSocket (n8n editor UI)
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket n8n:5678
+}

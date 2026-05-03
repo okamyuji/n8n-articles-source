@@ -1,0 +1,15 @@
+{
+  "name": "prd-design-bedrock-implementer",
+  "version": "1.0.0",
+  "description": "PRD/DesignDoc から Bedrock(Claude) で実装差分を生成し GitHub PR ブランチに commit する Lambda",
+  "main": "index.mjs",
+  "type": "module",
+  "scripts": {
+    "build": "rm -f implementer.zip && zip -r implementer.zip index.mjs package.json node_modules"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1041.0",
+    "@aws-sdk/client-ssm": "^3.1041.0"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "id": "awsSecGuardDutyImmAlert01",
+  "name": "aws-security-guardduty-immediate-alert",
+  "versionId": "1a000000-0000-4000-8000-fffffffffff4",
+  "meta": { "templateCredsSetupCompleted": false },
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aws-security-finding",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1a000000-0000-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "REPLACE_WITH_YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const incoming = $json.body || $json;\n\nfunction getSeverity(e) {\n  const raw = e.detail?.severity ?? e.detail?.findings?.[0]?.Severity?.Normalized ?? null;\n  if (raw == null) return { label: 'UNKNOWN', numeric: null };\n  if (raw >= 7) return { label: 'HIGH', numeric: raw };\n  if (raw >= 4) return { label: 'MEDIUM', numeric: raw };\n  return { label: 'LOW', numeric: raw };\n}\n\nfunction getResource(e) {\n  const r = e.detail?.resource || {};\n  return {\n    type: e.detail?.type || null,\n    region: e.region || null,\n    accountId: e.account || e.detail?.accountId || null,\n    resourceType: r.resourceType || null,\n    accessKeyId: r.accessKeyDetails?.accessKeyId || null,\n    userName: r.accessKeyDetails?.userName || null,\n    instanceId: r.instanceDetails?.instanceId || null\n  };\n}\n\nconst severity = getSeverity(incoming);\nconst resource = getResource(incoming);\n\nreturn [{\n  json: {\n    source: incoming.source,\n    detailType: incoming['detail-type'],\n    title: incoming.detail?.title || incoming['detail-type'],\n    description: incoming.detail?.description || null,\n    severity,\n    resource,\n    receivedAt: new Date().toISOString(),\n    raw: incoming\n  }\n}];"
+      },
+      "id": "1a000000-0000-4000-8000-000000000002",
+      "name": "Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "cond-severity",
+              "leftValue": "={{ $json.severity.numeric }}",
+              "rightValue": 4,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1a000000-0000-4000-8000-000000000003",
+      "name": "IF Severity >= 4",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "operation": "invoke",
+        "function": "aws-security-investigator-readonly",
+        "invocationType": "RequestResponse",
+        "qualifier": "$LATEST",
+        "payload": "={{ JSON.stringify({ region: $('Normalize').item.json.resource.region, username: $('Normalize').item.json.resource.userName, accessKeyId: $('Normalize').item.json.resource.accessKeyId, instanceId: $('Normalize').item.json.resource.instanceId }) }}"
+      },
+      "id": "1a000000-0000-4000-8000-000000000004",
+      "name": "Invoke Investigator",
+      "type": "n8n-nodes-base.awsLambda",
+      "typeVersion": 1,
+      "position": [720, -120]
+    },
+    {
+      "parameters": {
+        "operation": "invoke",
+        "function": "aws-security-bedrock-summarize",
+        "invocationType": "RequestResponse",
+        "qualifier": "$LATEST",
+        "payload": "={{ JSON.stringify({ finding: $('Normalize').item.json, investigation: $json }) }}"
+      },
+      "id": "1a000000-0000-4000-8000-000000000005",
+      "name": "Bedrock Summarize",
+      "type": "n8n-nodes-base.awsLambda",
+      "typeVersion": 1,
+      "position": [960, -120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "REPLACE_WITH_YOUR_SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: 'AWS Security Alert: ' + $('Normalize').item.json.title, blocks: [ { type: 'header', text: { type: 'plain_text', text: 'AWS Security Alert' } }, { type: 'section', text: { type: 'mrkdwn', text: '*' + $('Normalize').item.json.title + '*\\nSeverity: `' + $('Normalize').item.json.severity.label + '` (' + $('Normalize').item.json.severity.numeric + ')\\nAccount: `' + $('Normalize').item.json.resource.accountId + '` / Region: `' + $('Normalize').item.json.resource.region + '`' } }, { type: 'divider' }, { type: 'section', text: { type: 'mrkdwn', text: (($json.result && $json.result.summary) || $json.summary || JSON.stringify($json)).substring(0, 2900) } } ] }) }}",
+        "options": {}
+      },
+      "id": "1a000000-0000-4000-8000-000000000007",
+      "name": "Slack Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, -120]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Normalize", "type": "main", "index": 0 }]] },
+    "Normalize": { "main": [[{ "node": "IF Severity >= 4", "type": "main", "index": 0 }]] },
+    "IF Severity >= 4": { "main": [[{ "node": "Invoke Investigator", "type": "main", "index": 0 }], []] },
+    "Invoke Investigator": { "main": [[{ "node": "Bedrock Summarize", "type": "main", "index": 0 }]] },
+    "Bedrock Summarize": { "main": [[{ "node": "Slack Notify", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

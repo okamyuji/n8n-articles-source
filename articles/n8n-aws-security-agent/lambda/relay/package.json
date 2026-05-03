@@ -1,0 +1,13 @@
+{
+  "name": "aws-security-relay",
+  "version": "1.0.0",
+  "description": "EventBridge → n8n webhook relay Lambda. Reads bearer token from SSM SecureString.",
+  "main": "index.mjs",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ssm": "^3.1041.0"
+  }
+}

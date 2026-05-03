@@ -1,0 +1,13 @@
+{
+  "name": "aws-security-bedrock",
+  "version": "1.0.0",
+  "description": "Bedrock Claude Haiku summarizer Lambda for GuardDuty findings.",
+  "main": "index.mjs",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1041.0"
+  }
+}
