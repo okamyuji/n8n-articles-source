@@ -1,6 +1,6 @@
 # n8n + Bedrock PRD/DesignDoc Implementation Agent
 
-Zenn記事「n8n と Bedrock で PRD/DesignDoc から実装PRまで運ぶ Agent」の再現アセットです。Form 入力から Gemini で PRD/DesignDoc を生成して Google Drive に保存し、GitHub に PR ブランチを作って、AWS Bedrock (Claude Sonnet 4.6) で動く Lambda が実装パッチを生成して同 PR にコミットし、最後に PR コメントへ自動実装サマリを投稿する構成です。
+Zenn記事「n8nとBedrockでPRD/DesignDocから実装PRまで運ぶAgent」の再現アセットです。Form入力からGeminiでPRD/DesignDocを生成してGoogle Driveに保存し、GitHubにPRブランチを作って、AWS Bedrock(Claude Sonnet 4.6)で動くLambdaが実装パッチを生成して同PRにコミットし、最後にPRコメントへ自動実装サマリを投稿する構成です。
 
 ## 全体像
 
@@ -21,12 +21,12 @@ n8n Form Trigger (Shared Secret 認証)
 
 ## 前提
 
-- 記事1の n8n self-host が稼働済み
-- 記事2の `n8n-runtime-user` IAM ユーザーが存在（無ければ scripts/03 が新規作成）
-- AWS CLI v2 と Node.js 24.x がローカルにある
+- 記事1のn8n self-hostが稼働済み
+- 記事2の `n8n-runtime-user` IAMユーザーが存在（無ければscripts/03が新規作成）
+- AWS CLI v2とNode.js 24.xがローカルにある
 - GitHub Personal Access Token（`repo` + `pull-requests` スコープ）
-- Google Cloud Console で Drive API と Generative Language (Gemini) API のクレデンシャル発行済み
-- Form 経由で実装依頼する権限を持つ人に渡す Shared Secret
+- Google Cloud ConsoleでDrive APIとGenerative Language(Gemini) APIのクレデンシャル発行済み
+- Form経由で実装依頼する権限を持つ人に渡すShared Secret
 
 ## 手順
 
@@ -36,29 +36,29 @@ cp .env.example .env
 $EDITOR .env
 set -a; source .env; set +a
 
-# 2. IAM Role/Policy + GitHub Token を SSM へ
+# 2. IAM Role/Policy + GitHub TokenをSSMへ
 bash scripts/01-prepare-iam-and-ssm.sh
 
-# 3. Lambda をビルド + デプロイ
+# 3. Lambdaをビルド + デプロイ
 bash scripts/02-deploy-implementer-lambda.sh
 
-# 4. n8n 用 IAM ユーザーへ Lambda Invoke 権限を付与
+# 4. n8n用IAM ユーザーへLambda Invoke権限を付与
 bash scripts/03-create-n8n-runtime-user.sh
 
-# 5. PRD_AGENT_FORM_SECRET を n8n コンテナへ手動で投入（指示を表示）
+# 5. PRD_AGENT_FORM_SECRETをn8nコンテナへ手動で投入（指示を表示）
 bash scripts/04-set-form-secret.sh
 
-# 6. n8n の Web UI に workflows/prd-implementation-agent.workflow.json をインポート
-#    インポート後、各ノードの credential を自分のものに張り替える
+# 6. n8nのWeb UIにworkflows/prd-implementation-agent.workflow.jsonをインポート
+#    インポート後、各ノードのcredentialを自分のものに張り替える
 #    - Generate PRD and DesignDoc: Google Gemini (PaLM) Api
 #    - Get Base Branch Ref / Create GitHub Branch / Commit DesignDoc / Create GitHub PR
 #      / Post Implementation Summary: GitHub account
 #    - Upload PRD / DesignDoc as HTML: Google Drive OAuth2 Api
-#    - Invoke Bedrock Implementer: AWS (article 2 と同じ n8n-runtime-user のキー)
+#    - Invoke Bedrock Implementer: AWS (article 2と同じn8n-runtime-userのキー)
 #
-#    また workflow JSON 内に `REPLACE_WITH_YOUR_DRIVE_FOLDER_ID` のプレースホルダがあるので
-#    自分の Drive folder ID に置換してから Activate する。
-#    Form Trigger の webhookId と versionId は n8n インポート時に再生成される。
+#    また workflow JSON内に `REPLACE_WITH_YOUR_DRIVE_FOLDER_ID` のプレースホルダがあるので
+#    自分のDrive folder IDに置換してからActivateする。
+#    Form TriggerのwebhookIdとversionIdはn8nインポート時に再生成される。
 ```
 
 ## ファイル構成
@@ -76,7 +76,7 @@ bash scripts/04-set-form-secret.sh
 │   └── 99-cleanup.sh
 ├── lambda/
 │   └── prd-design-bedrock-implementer/
-│       ├── index.mjs                   # Bedrock 呼び出し + GitHub Contents API + path validation
+│       ├── index.mjs                   # Bedrock呼び出し + GitHub Contents API + path validation
 │       └── package.json
 ├── workflows/
 │   └── prd-implementation-agent.workflow.json
@@ -85,21 +85,21 @@ bash scripts/04-set-form-secret.sh
 │   ├── implementer-policy.json
 │   └── n8n-runtime-policy.json
 └── templates/
-    ├── prd-template-ja.md              # n8n の Code Node からURL参照される
+    ├── prd-template-ja.md              # n8nのCode NodeからURL参照される
     └── design-doc-template-ja.md
 ```
 
 ## セキュリティ運用上の注意
 
-- 全ての固有値（AWS Account ID, リージョン）は `${AWS_ACCOUNT_ID}` `${AWS_DEFAULT_REGION}` 形式で IAM JSON に書かれており、`scripts/01` の中で `envsubst` 置換してから put される。リポジトリ内には実値は無い。
-- `GITHUB_TOKEN` `PRD_AGENT_FORM_SECRET` は `.env` 経由で export し、SSM 投入後はシェル履歴から削除する。`set +o history` を併用するとさらに安全。
-- workflow JSON に含まれる `__REPLACE_WITH_YOUR_*__` と `REPLACE_WITH_YOUR_DRIVE_FOLDER_ID` は n8n インポート時に各自が置換する。
-- Lambda の `validatePath()` は `.github/`, `.env*`, `Caddyfile`, `iam-*.json`, `*.pem`, `id_rsa*` など CI 設定とシークレット系のパスへの書き込みを全て拒否する。Bedrock が攻撃的な計画を出してもこの層で遮断される。
-- Lambda の `SYSTEM_PROMPT` でも「破壊的変更や危険な操作は絶対にしない」「禁止パスを変更しない」を明記している。
-- Form Trigger の Shared Secret は timing-safe compare で照合する（短絡比較によるサイドチャネル防止）。
-- Bedrock 呼び出しは inference profile 経由で、IAM Resource は `ap-northeast-1` と `ap-northeast-3` の両方の foundation-model ARN を許可する（JP プロファイルの大阪ルーティング対応）。
+- 全ての固有値（AWS Account ID, リージョン）は `${AWS_ACCOUNT_ID}` `${AWS_DEFAULT_REGION}` 形式でIAM JSONに書かれており、`scripts/01` の中で `envsubst` 置換してからputされる。リポジトリ内には実値は無い。
+- `GITHUB_TOKEN` `PRD_AGENT_FORM_SECRET` は `.env` 経由でexportし、SSM投入後はシェル履歴から削除する。`set +o history` を併用するとさらに安全。
+- workflow JSONに含まれる `__REPLACE_WITH_YOUR_*__` と `REPLACE_WITH_YOUR_DRIVE_FOLDER_ID` はn8nインポート時に各自が置換する。
+- Lambdaの `validatePath()` は `.github/`, `.env*`, `Caddyfile`, `iam-*.json`, `*.pem`, `id_rsa*` などCI設定とシークレット系のパスへの書き込みを全て拒否する。Bedrockが攻撃的な計画を出してもこの層で遮断される。
+- Lambdaの `SYSTEM_PROMPT` でも「破壊的変更や危険な操作は絶対にしない」「禁止パスを変更しない」を明記している。
+- Form TriggerのShared Secretはtiming-safe compareで照合する（短絡比較によるサイドチャネル防止）。
+- Bedrock呼び出しはinference profile経由で、IAM Resourceは `ap-northeast-1` と `ap-northeast-3` の両方のfoundation-model ARNを許可する（JPプロファイルの大阪ルーティング対応）。
 
 ## 関連 Zenn 記事
 
-- 記事1: n8n を AWS にセルフホストする
-- 記事2: GuardDuty 通知を n8n + Bedrock で要約する Security Agent
+- 記事1: n8nをAWSにセルフホストする
+- 記事2: GuardDuty通知をn8n + Bedrockで要約するSecurity Agent
