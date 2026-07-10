@@ -115,7 +115,7 @@ function maskSecrets(obj) {
   const text = JSON.stringify(obj);
   const masked = text
     .replace(
-      /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+      /-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----[\s\S]{0,8192}?-----END [A-Z ]{0,32}PRIVATE KEY-----/g,
       "***PRIVATE_KEY***"
     )
     .replace(/AKIA[0-9A-Z]{16}/g, "AKIA****************")
