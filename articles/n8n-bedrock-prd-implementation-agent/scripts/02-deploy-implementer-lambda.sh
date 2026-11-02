@@ -17,6 +17,13 @@ PARAM_NAME=/prd-agent/prod/github-token
 RUNTIME=nodejs24.x
 MODEL_ID="${BEDROCK_SONNET_MODEL_ID:-jp.anthropic.claude-sonnet-4-6}"
 
+# .npmrc の min-release-age は npm 11.10.0 から効き、古い npm は黙って無視するので止める
+npm_version="$(npm --version)"
+if [ "$(printf '%s\n' 11.10.0 "$npm_version" | sort -V | head -n 1)" != 11.10.0 ]; then
+  echo "[step 02] npm $npm_version is older than 11.10.0 and ignores min-release-age in .npmrc" >&2
+  exit 1
+fi
+
 echo "[step 02] npm install + zip"
 ( cd "$LAMBDA_DIR" && npm install --omit=dev --no-package-lock --silent )
 ( cd "$LAMBDA_DIR" && zip -qr "$WORKDIR/implementer.zip" index.mjs package.json node_modules )

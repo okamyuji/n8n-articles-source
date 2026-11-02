@@ -13,6 +13,13 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 : "${N8N_WEBHOOK_URL:?N8N_WEBHOOK_URL must be exported (https://your-n8n-domain/webhook/aws-security-finding). Until n8n is set up, you may pass a placeholder and re-run after step 04.}"
 
+# .npmrc の min-release-age は npm 11.10.0 から効き、古い npm は黙って無視するので止める
+npm_version="$(npm --version)"
+if [ "$(printf '%s\n' 11.10.0 "$npm_version" | sort -V | head -n 1)" != 11.10.0 ]; then
+  echo "[step 02] npm $npm_version is older than 11.10.0 and ignores min-release-age in .npmrc" >&2
+  exit 1
+fi
+
 build_zip() {
   # build_zip <function_dir>
   local fdir="$1"
