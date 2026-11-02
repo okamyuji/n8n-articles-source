@@ -25,9 +25,10 @@ build_zip() {
   local fdir="$1"
   local name; name="$(basename "$fdir")"
   local out="$WORKDIR/${name}.zip"
-  echo "[step 02] build $name"
-  ( cd "$fdir" && npm install --omit=dev --min-release-age=3 --silent )
-  ( cd "$fdir" && zip -qr "$out" index.mjs node_modules package.json )
+  echo "[step 02] build $name" >&2
+  # $(...) の中では set -e が効かないので、失敗を呼び出し側の代入に返す
+  ( cd "$fdir" && npm install --omit=dev --min-release-age=3 --silent ) || return 1
+  ( cd "$fdir" && zip -qr "$out" index.mjs node_modules package.json ) || return 1
   echo "$out"
 }
 
