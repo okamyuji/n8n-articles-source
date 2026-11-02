@@ -13,14 +13,22 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 : "${N8N_WEBHOOK_URL:?N8N_WEBHOOK_URL must be exported (https://your-n8n-domain/webhook/aws-security-finding). Until n8n is set up, you may pass a placeholder and re-run after step 04.}"
 
+# min-release-age は npm 11.10.0 から効き、古い npm は黙って無視するので止める。環境変数の npm_config_min_release_age が .npmrc に勝つので、install にも直接渡す
+npm_version="$(npm --version)"
+if [ "$(printf '%s\n' 11.10.0 "$npm_version" | sort -V | head -n 1)" != 11.10.0 ]; then
+  echo "[step 02] npm $npm_version is older than 11.10.0 and ignores min-release-age" >&2
+  exit 1
+fi
+
 build_zip() {
   # build_zip <function_dir>
   local fdir="$1"
   local name; name="$(basename "$fdir")"
   local out="$WORKDIR/${name}.zip"
-  echo "[step 02] build $name"
-  ( cd "$fdir" && npm install --omit=dev --silent )
-  ( cd "$fdir" && zip -qr "$out" index.mjs node_modules package.json )
+  echo "[step 02] build $name" >&2
+  # $(...) の中では set -e が効かないので、失敗を呼び出し側の代入に返す
+  ( cd "$fdir" && npm install --omit=dev --min-release-age=3 --silent ) || return 1
+  ( cd "$fdir" && zip -qr "$out" index.mjs node_modules package.json ) || return 1
   echo "$out"
 }
 
