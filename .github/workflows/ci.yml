@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Each Lambda has no lockfile and no tests; install the deps the deploy script installs
+  # and import the handler, so a dependency update that breaks the module fails here.
+  lambda:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - articles/n8n-aws-security-agent/lambda/bedrock
+          - articles/n8n-aws-security-agent/lambda/investigator
+          - articles/n8n-aws-security-agent/lambda/relay
+          - articles/n8n-bedrock-prd-implementation-agent/lambda/prd-design-bedrock-implementer
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The Lambda runtime is nodejs24.x
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Install
+        run: npm install --omit=dev --no-package-lock --min-release-age=3
+
+      - name: Import the handler
+        env:
+          AWS_REGION: ap-northeast-1
+        run: node --input-type=module -e "const m = await import('./index.mjs'); if (typeof m.handler !== 'function') { console.error('index.mjs exports no handler'); process.exit(1); }"
